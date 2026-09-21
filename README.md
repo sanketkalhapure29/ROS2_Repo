@@ -112,12 +112,12 @@ ROS2 isn't an operating system — it's middleware that lets independent program
 | Day | Topic | Status |
 |-----|-------|--------|
 | 1 | Introduction to ROS2 & Installation | ✅ Done |
-| 2 | Nodes & Topics | 🔜 Coming up |
+| 2 | First ROS2 Program | 🔜 Coming up |
 
 ---
 
 ## 🔗 Connect
 
-Following along? I'm posting daily updates on **LinkedIn** — link in profile.
+Following along? I'm posting daily updates on **LinkedIn** — www.linkedin.com/in/sanket-kalhapure-617848318 
 
 `#ROS2 #Robotics #RoboticsEngineering #LearningInPublic #OpenSource`
