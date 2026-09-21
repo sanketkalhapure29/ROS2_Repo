@@ -66,8 +66,26 @@ source /opt/ros/jazzy/setup.bash
 ```
 
 > 💡 To avoid sourcing manually every session, add the line above to the end of your `~/.bashrc` file. Every new terminal will then have ROS2 ready automatically.
+🔁 Setting Up the Environment (auto-source on every terminal)
 
----
+Running source /opt/ros/jazzy/setup.bash manually every time you open a terminal gets old fast. Instead, add it to your .bashrc so it runs automatically.
+
+```bash
+cd /opt/ros/jazzy
+source setup.bash```
+
+Open your .bashrc file:
+
+```bash
+gedit .bashrc```
+
+Add the following line at the bottom of the .bashrc file:
+
+```bash
+source /opt/ros/jazzy/setup.bash```
+
+Save and close. Now, every time you open a new terminal, ROS2 is sourced automatically — no manual step needed.
+
 
 ## 🛠️ Supporting Tools Installed
 
