@@ -204,7 +204,7 @@ ros2 run my_cpp_pkg my_first_node
 |-----|-------|--------|
 | 1 | Introduction to ROS2 & Installation | ✅ Done |
 | 2 | Writing My First ROS2 Program (Packages & Nodes) | ✅ Done |
-| 3 | Topics & Pub/Sub | 🔜 Coming up |
+| 3 | ROS2 Tools| 🔜 Coming up |
 
 ---
 
