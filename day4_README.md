@@ -2,99 +2,254 @@
 
 Welcome to **Day 4 of my ROS 2 Learning Series**.
 
-Today I learned one of the most fundamental concepts in ROS 2: **Topics**.
+Today I learned one of the most important concepts in ROS 2: **Topics**.
 
-ROS 2 allows different nodes to communicate with each other using topics. In this example, I created a **Robot News Station** that publishes news messages and a **Smartphone** node that subscribes to those messages.
+ROS 2 nodes need a way to communicate with each other. Topics provide a simple communication mechanism where one node can **publish** data and another node can **subscribe** to that data.
+
+In this example, I created:
+
+* 📢 `RobotNewsStationNode` → Publisher
+* 📱 `SmartphoneNode` → Subscriber
+* 📡 `/robot_news` → Topic
+* 📨 `String` → Message type
 
 ---
 
-## 📌 What are ROS 2 Topics?
+# 📌 What are ROS 2 Topics?
 
 A **Topic** is a named communication channel in ROS 2.
 
-One node can **publish** data to a topic, while one or more nodes can **subscribe** to that topic.
-
-The basic communication model is:
+One node publishes messages to a topic, while another node subscribes to that topic.
 
 ```text
 Publisher Node
       │
       │ publish()
       ↓
-   /topic
+   /robot_news
       │
       │ message
       ↓
 Subscriber Node
 ```
 
-In this project:
+The nodes don't directly call each other's functions.
+
+Instead:
 
 ```text
-Robot News Station
-       │
-       │ Publisher
-       ↓
-  /robot_news
-       │
-       │ String message
-       ↓
-   Smartphone
-       │
-       │ Subscriber
-       ↓
-     Logger
+Node → Topic → Node
 ```
 
-The publisher and subscriber do not directly communicate with each other. The **topic acts as the communication channel between them**.
+The topic acts as the communication channel.
 
 ---
 
-# 🧠 ROS 2 Concepts Used
+# 🧠 Before Understanding ROS 2: Basic Python Concepts
 
-This example uses four important ROS 2 concepts:
-
-| Concept        | Purpose                                 |
-| -------------- | --------------------------------------- |
-| **Node**       | A process that performs a specific task |
-| **Publisher**  | Sends messages to a topic               |
-| **Subscriber** | Receives messages from a topic          |
-| **Topic**      | Communication channel between nodes     |
+The ROS 2 code uses some basic Python concepts that are important to understand first.
 
 ---
 
-# 📁 Package Structure
+## 1. Class
 
-The package used for this example is:
+A **class** is a blueprint for creating objects.
 
-```text
-my_py_pkg/
-├── package.xml
-├── setup.py
-├── setup.cfg
-└── my_py_pkg/
-    ├── __init__.py
-    ├── robot_news_station.py
-    └── smartphone.py
+For example:
+
+```python
+class SmartphoneNode:
+    pass
 ```
 
-The two Python files represent two different ROS 2 nodes:
+Here, `SmartphoneNode` is a class.
+
+In ROS 2, we create our node as a class:
+
+```python
+class SmartphoneNode(Node):
+```
+
+This means:
+
+> Create a class called `SmartphoneNode` that inherits functionality from the ROS 2 `Node` class.
+
+Similarly:
+
+```python
+class RobotNewsStationNode(Node):
+```
+
+creates the publisher node.
+
+---
+
+# 2. Inheritance
+
+Notice:
+
+```python
+class SmartphoneNode(Node):
+```
+
+The `Node` inside the brackets means that `SmartphoneNode` **inherits from** the ROS 2 `Node` class.
+
+This is called **inheritance**.
+
+Because of inheritance, our class can use ROS 2 functionality such as:
+
+```python
+self.create_publisher()
+self.create_subscription()
+self.create_timer()
+self.get_logger()
+```
+
+Think of it as:
 
 ```text
-robot_news_station.py
-        ↓
-Publisher
+ROS 2 Node
+     │
+     │ inheritance
+     ↓
+SmartphoneNode
+```
 
-smartphone.py
-        ↓
-Subscriber
+The same applies to:
+
+```text
+ROS 2 Node
+     │
+     ↓
+RobotNewsStationNode
 ```
 
 ---
 
-# 📢 1. Publisher Node — Robot News Station
+# 3. `__init__()` — Constructor
 
-The first node publishes a message every **0.5 seconds**.
+Inside our class we have:
+
+```python
+def __init__(self):
+```
+
+`__init__()` is a special Python function called a **constructor**.
+
+It automatically runs when we create an object.
+
+For example:
+
+```python
+node = SmartphoneNode()
+```
+
+When Python sees this:
+
+```text
+SmartphoneNode()
+      ↓
+__init__()
+```
+
+So everything inside `__init__()` gets executed.
+
+For our ROS 2 node, this is where we:
+
+* Give the node a name
+* Create the publisher/subscriber
+* Create timers
+* Initialize variables
+
+---
+
+# 4. What is `self`?
+
+You will see `self` throughout the code.
+
+For example:
+
+```python
+self.robot_name_ = "C3P0"
+```
+
+and:
+
+```python
+self.publisher_
+```
+
+and:
+
+```python
+self.create_subscription(...)
+```
+
+`self` refers to the **current object**.
+
+For example:
+
+```python
+node = SmartphoneNode()
+```
+
+The `node` object can be thought of as:
+
+```text
+node
+ │
+ ├── subscriber_
+ │
+ └── callback_robot_news()
+```
+
+When we write:
+
+```python
+self.subscriber_
+```
+
+we mean:
+
+> The `subscriber_` belonging to this particular node object.
+
+---
+
+# 5. Functions
+
+A function is a block of code designed to perform a particular task.
+
+For example:
+
+```python
+def hello():
+    print("Hello")
+```
+
+Calling:
+
+```python
+hello()
+```
+
+executes the function.
+
+Our ROS 2 programs contain several functions:
+
+```text
+__init__()
+publish_news()
+callback_robot_news()
+main()
+```
+
+Each function has a different job.
+
+---
+
+# 📢 1. Publisher Node
+
+The publisher node is responsible for creating and sending news messages.
 
 ## `robot_news_station.py`
 
@@ -159,29 +314,113 @@ if __name__ == "__main__":
 
 ---
 
-# 🔍 Understanding the Publisher
+# 🔍 Understanding the Publisher Code
 
-## Creating the Node
+## Step 1 — Import ROS 2
+
+```python
+import rclpy
+```
+
+This gives Python access to the ROS 2 Python API.
+
+---
+
+## Step 2 — Import `Node`
+
+```python
+from rclpy.node import Node
+```
+
+This allows us to create a ROS 2 node using Python.
+
+---
+
+## Step 3 — Import String
+
+```python
+from example_interfaces.msg import String
+```
+
+This imports the ROS 2 `String` message type.
+
+We use it to send text messages.
+
+---
+
+# Step 4 — Create the Class
+
+```python
+class RobotNewsStationNode(Node):
+```
+
+This creates our ROS 2 node class.
+
+It inherits from:
+
+```text
+Node
+```
+
+Therefore, it can use ROS 2 functions.
+
+---
+
+# Step 5 — Constructor
+
+```python
+def __init__(self):
+```
+
+This function runs automatically when:
+
+```python
+node = RobotNewsStationNode()
+```
+
+is executed.
+
+---
+
+# Step 6 — Initialize the ROS 2 Node
 
 ```python
 super().__init__("robot_news_station")
 ```
 
-This creates a ROS 2 node named:
+`super()` allows us to call functionality from the parent `Node` class.
+
+This creates the ROS 2 node:
 
 ```text
 /robot_news_station
 ```
 
-You can verify it using:
+---
 
-```bash
-ros2 node list
+# Step 7 — Create a Variable
+
+```python
+self.robot_name_ = "C3P0"
+```
+
+This creates a variable belonging to the node object.
+
+Its value is:
+
+```text
+C3P0
+```
+
+We can later access it using:
+
+```python
+self.robot_name_
 ```
 
 ---
 
-## Creating the Publisher
+# Step 8 — Create the Publisher
 
 ```python
 self.publisher_ = self.create_publisher(
@@ -191,41 +430,41 @@ self.publisher_ = self.create_publisher(
 )
 ```
 
-This creates a publisher.
+This creates a ROS 2 publisher.
 
-It has three important parameters:
+It has:
 
-### Message Type
+### Message type
 
 ```python
 String
 ```
 
-The publisher sends `String` messages.
-
-### Topic Name
+### Topic
 
 ```python
 "robot_news"
 ```
 
-The topic is:
-
-```text
-/robot_news
-```
-
-### Queue Depth
+### Queue depth
 
 ```python
 10
 ```
 
-This specifies the queue depth.
+So:
+
+```text
+RobotNewsStationNode
+        │
+        │ Publisher
+        ↓
+   /robot_news
+```
 
 ---
 
-# ⏱️ Creating the Timer
+# Step 9 — Create a Timer
 
 ```python
 self.timer_ = self.create_timer(
@@ -238,43 +477,60 @@ This tells ROS 2:
 
 > Call `publish_news()` every 0.5 seconds.
 
-Therefore:
+The important thing here is:
+
+```python
+self.publish_news
+```
+
+We don't use:
+
+```python
+self.publish_news()
+```
+
+because we are giving ROS 2 the function to call later.
+
+The timer produces:
 
 ```text
-0.0 sec → publish_news()
 0.5 sec → publish_news()
-1.0 sec → publish_news()
-1.5 sec → publish_news()
-2.0 sec → publish_news()
+0.5 sec → publish_news()
+0.5 sec → publish_news()
 ...
-```
-
-Since:
-
-```text
-Period = 0.5 seconds
-```
-
-the approximate publishing frequency is:
-
-```text
-Frequency = 1 / 0.5
-          = 2 Hz
 ```
 
 ---
 
-# 📨 Creating the Message
+# Step 10 — `publish_news()` Function
 
-Inside `publish_news()`:
+Now we have:
+
+```python
+def publish_news(self):
+```
+
+This is our own function.
+
+Its job is to:
+
+1. Create a message
+2. Put text into the message
+3. Publish the message
+
+---
+
+## Create Message
 
 ```python
 msg = String()
 ```
 
-creates a new `String` message.
+Creates a new `String` message.
 
-Then:
+---
+
+## Add Data
 
 ```python
 msg.data = (
@@ -284,29 +540,51 @@ msg.data = (
 )
 ```
 
-creates:
+Since:
+
+```python
+self.robot_name_ = "C3P0"
+```
+
+the final message becomes:
 
 ```text
 Hii, this is C3P0 from the robot news station
 ```
 
-Finally:
+---
+
+## Publish
 
 ```python
 self.publisher_.publish(msg)
 ```
 
-publishes the message to:
+This sends the message to:
 
 ```text
 /robot_news
 ```
 
+So the complete function is:
+
+```text
+publish_news()
+      │
+      ├── Create String message
+      │
+      ├── Add data
+      │
+      └── Publish
+             ↓
+        /robot_news
+```
+
 ---
 
-# 📱 2. Subscriber Node — Smartphone
+# 📱 2. Subscriber Node
 
-The second node subscribes to `/robot_news`.
+The subscriber receives the messages published by the Robot News Station.
 
 ## `smartphone.py`
 
@@ -354,15 +632,43 @@ if __name__ == "__main__":
 
 ---
 
-# 🔍 Understanding the Subscriber
+# 🔍 Understanding the Subscriber Code
 
-## Creating the Node
+## Step 1 — Create the Class
+
+```python
+class SmartphoneNode(Node):
+```
+
+Creates a ROS 2 node called `SmartphoneNode`.
+
+It inherits from the ROS 2 `Node` class.
+
+---
+
+# Step 2 — Constructor
+
+```python
+def __init__(self):
+```
+
+Runs automatically when:
+
+```python
+node = SmartphoneNode()
+```
+
+is executed.
+
+---
+
+# Step 3 — Initialize Node
 
 ```python
 super().__init__("smartphone")
 ```
 
-This creates a ROS 2 node named:
+The ROS 2 node name becomes:
 
 ```text
 /smartphone
@@ -370,7 +676,7 @@ This creates a ROS 2 node named:
 
 ---
 
-## Creating the Subscriber
+# Step 4 — Create Subscriber
 
 ```python
 self.subscriber_ = self.create_subscription(
@@ -381,67 +687,67 @@ self.subscriber_ = self.create_subscription(
 )
 ```
 
-The subscriber has four important parameters.
-
-### 1. Message Type
-
-```python
-String
-```
-
-The subscriber expects `String` messages.
-
-### 2. Topic
-
-```python
-"robot_news"
-```
-
-It listens to:
+There are four important parts:
 
 ```text
-/robot_news
-```
+String
+   ↓
+Message type
 
-### 3. Callback
+"robot_news"
+   ↓
+Topic
 
-```python
 self.callback_robot_news
-```
+   ↓
+Function to execute
 
-ROS 2 calls this function whenever a message arrives.
-
-### 4. Queue Depth
-
-```python
 10
+   ↓
+Queue depth
 ```
 
-The subscriber queue depth is set to 10.
+So the subscriber means:
+
+> Listen to `/robot_news`. When a `String` message arrives, call `callback_robot_news()`.
 
 ---
 
-# 🔔 What is a Callback?
-
-A **callback** is a function that ROS 2 automatically executes when a particular event occurs.
-
-Here:
+# 🔔 Step 5 — Callback Function
 
 ```python
 def callback_robot_news(self, msg: String):
 ```
 
-is called whenever a new message is received on `/robot_news`.
+This is a **callback function**.
 
-Inside the callback:
+ROS 2 automatically calls it whenever a new message arrives.
+
+The received message is stored in:
+
+```python
+msg
+```
+
+For example:
+
+```text
+msg
+ └── data
+      └── "Hii, this is C3P0 from the robot news station"
+```
+
+---
+
+# Step 6 — Read the Message
 
 ```python
 self.get_logger().info(msg.data)
 ```
 
-prints the received message.
+`msg.data` contains the actual string.
 
-For example:
+So the terminal displays:
 
 ```text
 [INFO] [smartphone]: Hii, this is C3P0 from the robot news station
@@ -449,94 +755,260 @@ For example:
 
 ---
 
-# ⚙️ How `rclpy.spin()` Works
+# 🧠 Understanding the Callback Workflow
 
-Both nodes contain:
+The subscriber doesn't continuously call:
+
+```python
+callback_robot_news()
+```
+
+Instead, ROS 2 waits for a message.
+
+```text
+Subscriber
+    │
+    │ Waiting...
+    ↓
+Message arrives
+    │
+    ↓
+ROS 2 automatically calls
+    │
+    ↓
+callback_robot_news(msg)
+    │
+    ↓
+msg.data
+    │
+    ↓
+Print message
+```
+
+This is the basic idea behind callbacks in ROS 2.
+
+---
+
+# 🚀 The `main()` Function
+
+Both programs contain:
+
+```python
+def main(args=None):
+```
+
+`main()` is the main entry point of the program.
+
+It performs three important things:
+
+```text
+main()
+  │
+  ├── Initialize ROS 2
+  │
+  ├── Create Node
+  │
+  └── Keep Node running
+```
+
+---
+
+## 1. Initialize ROS 2
+
+```python
+rclpy.init(args=args)
+```
+
+This initializes the ROS 2 Python communication system.
+
+---
+
+## 2. Create the Node
+
+Publisher:
+
+```python
+node = RobotNewsStationNode()
+```
+
+Subscriber:
+
+```python
+node = SmartphoneNode()
+```
+
+Creating the object automatically calls its:
+
+```python
+__init__()
+```
+
+---
+
+## 3. Keep the Node Running
 
 ```python
 rclpy.spin(node)
 ```
 
-`spin()` keeps the node alive and allows ROS 2 to process events and callbacks.
+`spin()` keeps the node alive and processes ROS 2 events.
 
 For the publisher:
 
 ```text
-rclpy.spin()
-      ↓
-Timer reaches 0.5 sec
-      ↓
+spin()
+  ↓
+Timer event
+  ↓
 publish_news()
-      ↓
-Publish message
 ```
 
 For the subscriber:
 
 ```text
-rclpy.spin()
-      ↓
-Wait for message
-      ↓
+spin()
+  ↓
 Message arrives
-      ↓
+  ↓
 callback_robot_news()
-      ↓
-Print message
 ```
-
-Without `rclpy.spin(node)`, the node would not remain active waiting for events.
 
 ---
 
-# 🔄 Complete Communication Workflow
+## 4. Shutdown
 
-When both nodes are running, the data flows like this:
+When the program is stopped:
+
+```python
+rclpy.shutdown()
+```
+
+shuts down the ROS 2 communication system.
+
+Usually the program is stopped using:
 
 ```text
-┌─────────────────────────────┐
-│   RobotNewsStationNode      │
-│                             │
-│   robot_name = "C3P0"       │
-│   Publisher                 │
-└──────────────┬──────────────┘
+Ctrl + C
+```
+
+---
+
+# 🧩 Complete Python Program Flow
+
+The publisher works like this:
+
+```text
+main()
+  ↓
+rclpy.init()
+  ↓
+RobotNewsStationNode()
+  ↓
+__init__()
+  ↓
+Create Publisher
+  ↓
+Create Timer
+  ↓
+rclpy.spin()
+  ↓
+Timer every 0.5 sec
+  ↓
+publish_news()
+  ↓
+Create String
+  ↓
+Add data
+  ↓
+publish()
+  ↓
+/robot_news
+```
+
+The subscriber works like this:
+
+```text
+main()
+  ↓
+rclpy.init()
+  ↓
+SmartphoneNode()
+  ↓
+__init__()
+  ↓
+Create Subscriber
+  ↓
+rclpy.spin()
+  ↓
+Wait for message
+  ↓
+Message arrives
+  ↓
+callback_robot_news()
+  ↓
+msg.data
+  ↓
+Logger
+```
+
+---
+
+# 🔄 Complete ROS 2 Communication
+
+Putting both nodes together:
+
+```text
+┌────────────────────────────┐
+│   RobotNewsStationNode     │
+│                            │
+│   class                    │
+│       │                    │
+│       └── __init__()       │
+│              │             │
+│              ↓             │
+│         Publisher          │
+│              │             │
+│              ↓             │
+│       publish_news()       │
+└──────────────┬─────────────┘
                │
                │ publish()
                ↓
-       ┌────────────────┐
-       │  /robot_news   │
-       │                │
-       │ String Message │
-       └───────┬────────┘
+        ┌──────────────┐
+        │ /robot_news  │
+        └──────┬───────┘
                │
-               │ message
+               │ String message
                ↓
-┌─────────────────────────────┐
-│       SmartphoneNode        │
-│                             │
-│       Subscriber            │
-│                             │
-│   callback_robot_news()     │
-└──────────────┬──────────────┘
-               │
-               ↓
-          msg.data
-               │
-               ↓
-           Terminal
+┌────────────────────────────┐
+│       SmartphoneNode       │
+│                            │
+│   class                    │
+│       │                    │
+│       └── __init__()       │
+│              │             │
+│              ↓             │
+│         Subscriber         │
+│              │             │
+│              ↓             │
+│   callback_robot_news()    │
+│              │             │
+│              ↓             │
+│          msg.data           │
+└────────────────────────────┘
 ```
 
 ---
 
-# 🛠️ Configuring `setup.py`
+# 📦 `setup.py` — Creating Executables
 
-To run Python nodes using:
+Writing Python nodes isn't enough to run them using:
 
 ```bash
 ros2 run my_py_pkg robot_news_station
 ```
 
-we need to register them as executable entry points.
+We need to tell ROS 2 which Python files should become executables.
 
 Open:
 
@@ -544,7 +1016,7 @@ Open:
 my_py_pkg/setup.py
 ```
 
-and add:
+Add:
 
 ```python
 entry_points={
@@ -574,7 +1046,7 @@ The format is:
 executable_name = package.module:function
 ```
 
-Breaking it down:
+So:
 
 ```text
 robot_news_station
@@ -600,7 +1072,7 @@ Therefore:
 ros2 run my_py_pkg robot_news_station
 ```
 
-will execute:
+runs:
 
 ```python
 main()
@@ -618,7 +1090,7 @@ Similarly:
 "smartphone = my_py_pkg.smartphone:main",
 ```
 
-allows us to run:
+allows:
 
 ```bash
 ros2 run my_py_pkg smartphone
@@ -626,15 +1098,15 @@ ros2 run my_py_pkg smartphone
 
 ---
 
-# 📦 Configuring `package.xml`
+# 📦 `package.xml` — Declaring Dependencies
 
-Our Python nodes use:
+Our Python code uses:
 
 ```python
 from example_interfaces.msg import String
 ```
 
-Therefore, the package needs the `example_interfaces` dependency.
+Therefore, our package needs the `example_interfaces` package.
 
 Open:
 
@@ -648,42 +1120,43 @@ and add:
 <depend>example_interfaces</depend>
 ```
 
-The correct syntax is:
+This tells ROS 2:
 
-```xml
-<depend>example_interfaces</depend>
-```
+> This package depends on `example_interfaces`.
 
----
-
-# 🧩 Why is `example_interfaces` Required?
-
-The `String` message comes from:
-
-```text
-example_interfaces
-```
-
-Our dependency chain is:
+The dependency relationship is:
 
 ```text
 my_py_pkg
     │
-    │ depends on
     ↓
 example_interfaces
     │
     ↓
-String
+String message
 ```
 
-Without declaring this dependency, the package does not properly describe what it requires to build/run.
+---
+
+# 📁 Final Package Structure
+
+```text
+ros2_ws/
+└── src/
+    └── my_py_pkg/
+        ├── package.xml
+        ├── setup.py
+        ├── setup.cfg
+        │
+        └── my_py_pkg/
+            ├── __init__.py
+            ├── robot_news_station.py
+            └── smartphone.py
+```
 
 ---
 
 # 🔎 Useful ROS 2 CLI Commands
-
-Once the nodes are running, ROS 2 provides several CLI commands to inspect the system.
 
 ## List Nodes
 
@@ -714,13 +1187,13 @@ You should see:
 
 ---
 
-## Get Topic Information
+## Topic Information
 
 ```bash
 ros2 topic info /robot_news
 ```
 
-You should see information similar to:
+Example:
 
 ```text
 Type: example_interfaces/msg/String
@@ -744,9 +1217,7 @@ example_interfaces/msg/String
 
 ---
 
-## View Messages Directly
-
-You can inspect the topic without running the Smartphone node:
+## View Topic Messages
 
 ```bash
 ros2 topic echo /robot_news
@@ -769,71 +1240,84 @@ data: Hii, this is C3P0 from the robot news station
 ros2 topic hz /robot_news
 ```
 
-Since the publisher uses a 0.5-second timer, the result should be approximately:
+Expected approximately:
 
 ```text
 average rate: 2.0
 ```
 
+because:
+
+```text
+Frequency = 1 / Period
+          = 1 / 0.5
+          = 2 Hz
+```
+
+---
+
+# 🤖 Why Topics Matter in Robotics
+
+Topics are heavily used in real robots.
+
+For example:
+
+### Camera
+
+```text
+Camera Node
+    ↓
+/camera/image_raw
+    ↓
+Object Detection Node
+```
+
+### LiDAR
+
+```text
+LiDAR Node
+    ↓
+/scan
+    ↓
+SLAM Node
+```
+
+### IMU
+
+```text
+IMU Node
+    ↓
+/imu/data
+    ↓
+Localization Node
+```
+
+### Robot Motion
+
+```text
+Navigation Node
+    ↓
+/cmd_vel
+    ↓
+Motor Controller
+    ↓
+Motors
+```
+
+This modular architecture allows every node to focus on a particular task.
+
 ---
 
 # 📊 Publisher vs Subscriber
 
-| Feature        | Publisher            | Subscriber              |
-| -------------- | -------------------- | ----------------------- |
-| Purpose        | Sends data           | Receives data           |
-| ROS 2 API      | `create_publisher()` | `create_subscription()` |
-| Topic          | `/robot_news`        | `/robot_news`           |
-| Message        | `String`             | `String`                |
-| Main operation | `publish()`          | Callback                |
-| Node           | `robot_news_station` | `smartphone`            |
-
----
-
-# 🤖 Why Topics Are Important in Robotics
-
-Topics are heavily used in real robotic systems.
-
-For example, a camera node can publish images:
-
-```text
-Camera Node
-     │
-     ↓
-/camera/image_raw
-     │
-     ↓
-Object Detection Node
-```
-
-A LiDAR can publish laser scan data:
-
-```text
-LiDAR Node
-     │
-     ↓
-/scan
-     │
-     ↓
-SLAM / Navigation Node
-```
-
-A navigation system can publish velocity commands:
-
-```text
-Navigation Node
-       │
-       ↓
-    /cmd_vel
-       │
-       ↓
-Motor Controller
-       │
-       ↓
-    Motors
-```
-
-This modular architecture allows each ROS 2 node to focus on a specific task.
+| Feature       | Publisher            | Subscriber              |
+| ------------- | -------------------- | ----------------------- |
+| Purpose       | Sends data           | Receives data           |
+| API           | `create_publisher()` | `create_subscription()` |
+| Topic         | `/robot_news`        | `/robot_news`           |
+| Message       | `String`             | `String`                |
+| Main function | `publish_news()`     | `callback_robot_news()` |
+| Communication | Publishes            | Subscribes              |
 
 ---
 
@@ -842,27 +1326,31 @@ This modular architecture allows each ROS 2 node to focus on a specific task.
 After completing this topic, I learned:
 
 * What a **ROS 2 Topic** is
-* How Publisher–Subscriber communication works
-* How to create a Publisher using `create_publisher()`
-* How to create a Subscriber using `create_subscription()`
-* How to create and publish a `String` message
-* How subscriber callbacks work
-* How `rclpy.spin()` keeps nodes alive
-* How to register Python nodes using `setup.py`
+* How nodes communicate using topics
+* What a **Publisher** does
+* What a **Subscriber** does
+* How `create_publisher()` works
+* How `create_subscription()` works
+* How ROS 2 callbacks work
+* What `__init__()` does
+* What `self` means in Python classes
+* How Python classes and inheritance are used in ROS 2
+* How `rclpy.spin()` keeps a node alive
+* How to register Python executables using `setup.py`
 * How to declare dependencies using `package.xml`
-* How to inspect ROS 2 nodes and topics using the ROS 2 CLI
+* How to inspect topics using ROS 2 CLI commands
 
-The core concept is:
+The most important architecture to remember is:
 
 ```text
 Node
-  ↓
+ ↓
 Publisher
-  ↓
+ ↓
 Topic
-  ↓
+ ↓
 Subscriber
-  ↓
+ ↓
 Node
 ```
 
@@ -874,9 +1362,13 @@ Or simply:
 
 # ▶️ How to Build and Run
 
-## 1. Source ROS 2
+Make sure you are using **ROS 2 Jazzy** and your workspace is:
 
-For ROS 2 Jazzy:
+```text
+~/ros2_ws
+```
+
+## 1. Source ROS 2
 
 ```bash
 source /opt/ros/jazzy/setup.bash
@@ -884,7 +1376,7 @@ source /opt/ros/jazzy/setup.bash
 
 ---
 
-## 2. Go to the Workspace
+## 2. Go to Workspace
 
 ```bash
 cd ~/ros2_ws
@@ -950,7 +1442,7 @@ You should see:
 [INFO] [smartphone]: Hii, this is C3P0 from the robot news station
 ```
 
-The message will continue to appear approximately every **0.5 seconds**.
+The message will continue approximately every **0.5 seconds**.
 
 ---
 
@@ -1003,34 +1495,30 @@ ros2 topic hz /robot_news
 
 # 🚀 Final Result
 
-After running both nodes, the final ROS 2 system looks like:
+After running both nodes:
 
 ```text
-                 ROS 2
-                   │
-        ┌──────────┴──────────┐
-        │                     │
-        ↓                     ↓
-robot_news_station        smartphone
-        │                     ↑
-        │                     │
-        │ publish             │ subscribe
-        ↓                     │
-      /robot_news ────────────┘
-        │
-        ↓
-   String message
+             ROS 2
+               │
+       ┌───────┴────────┐
+       ↓                ↓
+RobotNewsStation     Smartphone
+       │                ↑
+       │                │
+       │ publish        │ subscribe
+       ↓                │
+    /robot_news ────────┘
+       │
+       ↓
+  String Message
 ```
 
 This simple example demonstrates the basic communication architecture used throughout ROS 2 and provides the foundation for working with real robot sensors, controllers, navigation systems, perception pipelines, and autonomous robots.
 
 ---
 
-## 📚 ROS 2 Learning Series
+# 📚 ROS 2 Learning Series
 
 This README is part of my ongoing **ROS 2 Learning Series**, where I am documenting my learning journey through GitHub and LinkedIn.
-
-🔗 **GitHub Repository:**
-https://github.com/sanketkalhapure29/ROS2_Fundamentals
 
 **Learn → Build → Document → Repeat 🤖**
