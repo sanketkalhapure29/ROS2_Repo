@@ -1,6 +1,6 @@
 # ROS 2 Topics: Making Nodes Communicate With Each Other 🤖
 
-Welcome to **Day 3 of my ROS 2 Learning Series**.
+Welcome to **Day 4 of my ROS 2 Learning Series**.
 
 Today I learned one of the most fundamental concepts in ROS 2: **Topics**.
 
