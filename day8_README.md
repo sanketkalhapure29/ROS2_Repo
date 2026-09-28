@@ -2,7 +2,7 @@
 
 > **Day 8 of my ROS 2 Learning Journey**
 
-A complete ROS 2 project built using **Python, Turtlesim, Topics, Services, Custom Interfaces, Parameters, Timers, Publishers, Subscribers, Service Clients, Service Servers, and ROS 2 nodes**.
+A complete ROS 2 project built using **Python, Turtlesim, Topics, Services, Custom Interfaces, Parameters, Timers, Publishers, Subscribers, Service Clients, Service Servers, and ROS 2 Nodes**.
 
 The goal of this project is to build a small autonomous system where one main turtle continuously searches for and catches randomly spawned turtles.
 
@@ -18,21 +18,32 @@ The goal of this project is to build a small autonomous system where one main tu
 * [Node Architecture](#-node-architecture)
 * [Communication Architecture](#-communication-architecture)
 * [Custom Interfaces](#-custom-interfaces)
-* [Spawner Node](#-1-turtle-spawner-node)
-* [Controller Node](#-2-turtle-controller-node)
-* [How the Controller Finds the Closest Turtle](#-how-the-controller-finds-the-closest-turtle)
-* [How the Turtle Moves Toward the Target](#-how-the-turtle-moves-toward-the-target)
-* [How a Turtle Gets Caught](#-how-a-turtle-gets-caught)
+* [1. Turtle Spawner Node](#-1-turtle-spawner-node)
+* [Random Turtle Generation](#-random-turtle-generation)
+* [Calling the `/spawn` Service](#-calling-the-spawn-service)
+* [Maintaining the Alive Turtle List](#-maintaining-the-alive-turtle-list)
+* [2. Turtle Controller Node](#-2-turtle-controller-node)
+* [Receiving Turtle Pose](#-receiving-turtle-pose)
+* [Selecting a Target](#-selecting-a-target)
+* [Distance Calculation](#-distance-calculation)
+* [Calculating the Target Direction](#-calculating-the-target-direction)
+* [Velocity Controller](#-velocity-controller)
+* [Target Reached](#-target-reached)
+* [Catching the Turtle](#-catching-the-turtle)
+* [Complete Catching Workflow](#-complete-catching-workflow)
 * [ROS 2 Parameters](#-ros-2-parameters)
+* [Executable Names vs Node Names](#-executable-names-vs-node-names)
 * [Package Structure](#-package-structure)
 * [Dependencies](#-dependencies)
 * [Build the Project](#-build-the-project)
 * [Run the Project](#-run-the-project)
+* [Run With Parameters](#-run-with-parameters)
 * [Useful ROS 2 Commands](#-useful-ros-2-commands)
 * [Complete Workflow](#-complete-workflow)
-* [Important Concepts Learned](#-important-concepts-learned)
+* [What I Learned](#-what-i-learned)
 * [Possible Improvements](#-possible-improvements)
 * [Key Takeaways](#-key-takeaways)
+* [Final Result](#-final-result)
 
 ---
 
@@ -54,13 +65,17 @@ Instead of manually controlling the turtle, the system automatically:
 10. Removes the caught turtle.
 11. Repeats the process.
 
-The project therefore combines many individual ROS 2 concepts into one complete application.
+This project combines multiple ROS 2 concepts into one complete application.
 
 ---
 
 # 🎯 Project Goal
 
-The main goal is to create an autonomous turtle that can **find and catch other turtles**.
+The main goal is to create an autonomous turtle that can:
+
+```text
+Find → Approach → Catch → Remove → Find Next
+```
 
 The project is designed to practice how different ROS 2 components work together.
 
@@ -77,13 +92,13 @@ Publishers
 Subscribers
 ```
 
-individually, this project combines them into one system.
+individually, this project combines them into one working system.
 
 ---
 
 # 🎬 Final Behavior
 
-The final simulation looks conceptually like this:
+The final simulation works conceptually like this:
 
 ```text
                  🐢 Target Turtle
@@ -105,7 +120,7 @@ The controller determines which turtle should be caught and moves `turtle1` towa
 Once the target is close enough:
 
 ```text
-Target detected
+Target selected
       ↓
 Move toward target
       ↓
@@ -137,8 +152,6 @@ turtle_spawner
 turtle_controller
 ```
 
----
-
 ### Topics
 
 Topics are used for continuous data communication.
@@ -151,8 +164,6 @@ Examples:
 /turtle1/cmd_vel
 ```
 
----
-
 ### Services
 
 Services are used for request/response communication.
@@ -164,8 +175,6 @@ Examples:
 /kill
 /catch_turtle
 ```
-
----
 
 ### Custom Messages
 
@@ -182,8 +191,6 @@ Turtle.msg
 TurtleArray.msg
 ```
 
----
-
 ### Custom Service
 
 The project also uses:
@@ -192,33 +199,25 @@ The project also uses:
 CatchTurtle.srv
 ```
 
----
-
 ### Parameters
 
-The nodes use ROS 2 parameters to change behavior without modifying the source code.
-
----
+ROS 2 parameters are used to change application behavior without modifying the source code.
 
 ### Timers
 
 Timers are used to:
 
-* periodically spawn turtles
-* continuously execute the controller loop
-
----
+* Periodically spawn turtles.
+* Continuously execute the controller loop.
 
 ### Publishers
 
 The nodes publish:
 
 ```text
-alive_turtles
+/alive_turtles
 /turtle1/cmd_vel
 ```
-
----
 
 ### Subscribers
 
@@ -226,28 +225,24 @@ The controller subscribes to:
 
 ```text
 /turtle1/pose
-alive_turtles
+/alive_turtles
 ```
-
----
 
 ### Service Clients
 
-The nodes communicate with turtlesim services:
+The nodes communicate with Turtlesim services:
 
 ```text
 /spawn
 /kill
 ```
 
----
-
 ### Service Server
 
 The spawner provides:
 
 ```text
-catch_turtle
+/catch_turtle
 ```
 
 ---
@@ -273,14 +268,14 @@ The complete architecture can be represented as:
                     ▼                               ▲
           ┌──────────────────┐             ┌────────┴─────────┐
           │ Turtle Spawner   │             │ Catch Turtle     │
-          │                  │             │ Service          │
+          │ Node             │             │ Service          │
           └────────┬─────────┘             └────────▲─────────┘
                    │                                │
-                   │ alive_turtles                  │
+                   │ /alive_turtles                 │
                    ▼                                │
           ┌──────────────────┐                      │
           │ Turtle Controller│──────────────────────┘
-          │                  │
+          │ Node             │
           └────────┬─────────┘
                    │
                    │ /turtle1/cmd_vel
@@ -296,12 +291,19 @@ There are two main custom nodes.
 
 ## 1. Turtle Spawner
 
+### Node Name
+
 ```text
-Node Name:
 turtle_spawner
 ```
 
-Responsibilities:
+### Executable Name
+
+```text
+spawner
+```
+
+### Responsibilities
 
 * Generate random turtle positions.
 * Request Turtlesim to spawn turtles.
@@ -314,12 +316,19 @@ Responsibilities:
 
 ## 2. Turtle Controller
 
+### Node Name
+
 ```text
-Node Name:
 turtle_controller
 ```
 
-Responsibilities:
+### Executable Name
+
+```text
+controller
+```
+
+### Responsibilities
 
 * Receive the current pose of `turtle1`.
 * Receive information about alive turtles.
@@ -354,11 +363,11 @@ y
 theta
 ```
 
-The controller stores this information as its current robot state.
+The controller stores this information as its current turtle state.
 
 ---
 
-# Topic 2 — `/turtle1/cmd_vel`
+## Topic 2 — `/turtle1/cmd_vel`
 
 The controller publishes:
 
@@ -368,7 +377,7 @@ geometry_msgs/msg/Twist
 
 This message controls the movement of `turtle1`.
 
-The controller sets:
+The controller uses:
 
 ```text
 linear.x
@@ -377,16 +386,16 @@ angular.z
 
 to control:
 
-* forward velocity
-* rotational velocity
+* Forward velocity.
+* Rotational velocity.
 
 ---
 
-# Topic 3 — `alive_turtles`
+## Topic 3 — `/alive_turtles`
 
 The spawner publishes information about all currently alive turtles.
 
-Message:
+Message type:
 
 ```text
 my_robot_interfaces/msg/TurtleArray
@@ -442,9 +451,7 @@ This represents one turtle and its position/orientation.
 
 ## `TurtleArray.msg`
 
-This message contains an array of turtles.
-
-Conceptually:
+This message contains an array of turtles:
 
 ```text
 Turtle[] turtles
@@ -476,10 +483,16 @@ The response tells whether the turtle was successfully caught.
 
 The spawner node is responsible for continuously creating turtles.
 
-The node is named:
+### Node Name
 
 ```text
 turtle_spawner
+```
+
+### Executable
+
+```text
+spawner
 ```
 
 The implementation creates:
@@ -488,7 +501,7 @@ The implementation creates:
 alive_turtles
 ```
 
-publisher:
+publisher using:
 
 ```text
 TurtleArray
@@ -508,8 +521,6 @@ catch_turtle
 ```
 
 service.
-
-The actual implementation creates the `alive_turtles` publisher, `/spawn` client, `/kill` client, and `catch_turtle` service.
 
 ---
 
@@ -536,7 +547,7 @@ y     → random position
 theta → random orientation
 ```
 
-The implementation uses random values for `x`, `y`, and `theta`.
+The implementation uses random values for these properties.
 
 ---
 
@@ -605,35 +616,39 @@ Remove turtle from alive_turtles_
 Publish updated TurtleArray
 ```
 
-The removal logic searches for the turtle by name and deletes it from the list.
+The removal logic searches for the turtle by name and removes it from the list.
 
 ---
 
 # 🎯 2. Turtle Controller Node
 
-The controller node is named:
-
-```text
-turtle_controller
-```
-
-It controls the main turtle:
+The controller node controls the main turtle:
 
 ```text
 turtle1
 ```
 
+### Node Name
+
+```text
+turtle_controller
+```
+
+### Executable
+
+```text
+controller
+```
+
 The controller:
 
-* receives turtle1's pose
-* receives alive turtles
-* selects a target
-* calculates distance
-* calculates orientation
-* publishes velocity
-* catches the target
-
-The controller's publishers, subscribers, service client, and control-loop timer are created in its constructor.
+* Receives `turtle1` pose.
+* Receives alive turtle information.
+* Selects a target.
+* Calculates distance.
+* Calculates orientation.
+* Publishes velocity.
+* Requests the target to be caught.
 
 ---
 
@@ -645,7 +660,7 @@ The controller subscribes to:
 /turtle1/pose
 ```
 
-Message:
+Message type:
 
 ```text
 turtlesim/msg/Pose
@@ -657,7 +672,7 @@ The callback stores the latest pose:
 self.pose_
 ```
 
-The controller therefore always knows:
+The controller therefore knows:
 
 ```text
 Current X
@@ -665,7 +680,7 @@ Current Y
 Current orientation
 ```
 
-The uploaded implementation stores the incoming `Pose` directly in `self.pose_`.
+The implementation stores the incoming `Pose` directly in `self.pose_`.
 
 ---
 
@@ -674,7 +689,7 @@ The uploaded implementation stores the incoming `Pose` directly in `self.pose_`.
 The controller receives:
 
 ```text
-alive_turtles
+/alive_turtles
 ```
 
 through:
@@ -683,9 +698,9 @@ through:
 TurtleArray
 ```
 
-If there are alive turtles, the controller selects one.
+If there are alive turtles, the controller selects a target.
 
-There are two possible behaviors controlled by a parameter:
+Target selection is controlled by the parameter:
 
 ```text
 catch_closest_turtle_first
@@ -703,7 +718,7 @@ catch_closest_turtle_first = True
 
 the controller calculates the distance to every turtle.
 
-For every target:
+For each target:
 
 ```text
 distance =
@@ -711,27 +726,25 @@ sqrt((target_x - current_x)² +
      (target_y - current_y)²)
 ```
 
-Then it selects the turtle with the smallest distance.
-
-The implementation performs this comparison across the received turtle list.
+The controller compares these distances and selects the turtle with the smallest distance.
 
 ---
 
 ## Option 2 — First Turtle
 
-If the parameter is:
+If:
 
 ```text
-False
+catch_closest_turtle_first = False
 ```
 
-the controller simply selects:
+the controller selects:
 
 ```text
 msg.turtles[0]
 ```
 
-This provides two different target-selection strategies without changing the source code.
+This provides two target-selection strategies without modifying the source code.
 
 ---
 
@@ -751,20 +764,20 @@ x2 = 8
 y2 = 9
 ```
 
-Then:
+Calculate:
 
 ```text
 dx = x2 - x1
 dy = y2 - y1
 ```
 
-and:
+Then:
 
 ```text
 distance = sqrt(dx² + dy²)
 ```
 
-The controller uses exactly this Euclidean distance calculation to determine how far the target turtle is.
+The controller uses this Euclidean distance to determine how far the target turtle is.
 
 ---
 
@@ -781,25 +794,29 @@ This determines the angle from the main turtle toward the target.
 Then:
 
 ```text
-difference =
+angle_difference =
 goal_theta - current_theta
 ```
 
-The difference is normalized so that the turtle chooses the appropriate rotational direction.
+The angle difference is normalized into the:
 
-The controller uses `atan2()` and adjusts the angle into the `[-π, π]` range.
+```text
+[-π, π]
+```
+
+range.
+
+This helps the turtle choose the appropriate rotational direction.
 
 ---
 
 # 🎮 Velocity Controller
 
-The controller generates a:
+The controller generates:
 
 ```text
 geometry_msgs/msg/Twist
 ```
-
-message.
 
 When the target is farther than:
 
@@ -833,7 +850,11 @@ Large angle error
 Higher angular velocity
 ```
 
-The corresponding control logic is implemented in the controller's `control_loop()`.
+The corresponding control logic is implemented inside the controller's:
+
+```text
+control_loop()
+```
 
 ---
 
@@ -854,7 +875,7 @@ linear.x = 0
 angular.z = 0
 ```
 
-and calls:
+and sends a request to:
 
 ```text
 catch_turtle
@@ -882,9 +903,9 @@ Spawner
 Turtlesim
 ```
 
-This is an important ROS2 architecture decision.
+This separates responsibilities between the nodes.
 
-The spawner owns the turtle-management functionality, so it is responsible for removing turtles.
+The spawner owns turtle-management functionality, so it is responsible for removing turtles.
 
 The controller only requests:
 
@@ -913,14 +934,14 @@ Turtlesim removes turtle
           ↓
 Spawner removes turtle from list
           ↓
-Spawner publishes updated alive_turtles
+Spawner publishes updated /alive_turtles
           ↓
 Controller selects another target
           ↓
 Process repeats
 ```
 
-The controller sends the catch request asynchronously and checks the service response through a callback.
+The controller sends the catch request asynchronously and handles the service response through a callback.
 
 ---
 
@@ -949,6 +970,8 @@ turtle3
 ...
 ```
 
+---
+
 ### `spawn_frequency`
 
 Default:
@@ -958,8 +981,6 @@ Default:
 ```
 
 This controls how frequently new turtles are spawned.
-
-The spawner declares and reads both parameters during initialization.
 
 ---
 
@@ -989,6 +1010,106 @@ The controller declares and reads this parameter during initialization.
 
 ---
 
+# 🔑 Executable Names vs Node Names
+
+One important ROS 2 concept demonstrated by this project is the difference between an **executable name** and a **node name**.
+
+## Turtle Spawner
+
+```text
+Package:
+turtlesim_catch_them_all
+
+Executable:
+spawner
+
+Node:
+turtle_spawner
+```
+
+Run it using:
+
+```bash
+ros2 run turtlesim_catch_them_all spawner
+```
+
+The running node is:
+
+```text
+/turtle_spawner
+```
+
+---
+
+## Turtle Controller
+
+```text
+Package:
+turtlesim_catch_them_all
+
+Executable:
+controller
+
+Node:
+turtle_controller
+```
+
+Run it using:
+
+```bash
+ros2 run turtlesim_catch_them_all controller
+```
+
+The running node is:
+
+```text
+/turtle_controller
+```
+
+### Important distinction
+
+```text
+Executable                  Node
+────────────────────────────────────────
+spawner          →         turtle_spawner
+
+controller       →         turtle_controller
+```
+
+Therefore:
+
+```bash
+ros2 run turtlesim_catch_them_all spawner
+```
+
+is correct.
+
+And:
+
+```bash
+ros2 node info /turtle_spawner
+```
+
+is also correct.
+
+Similarly:
+
+```bash
+ros2 run turtlesim_catch_them_all controller
+```
+
+is correct.
+
+And:
+
+```bash
+ros2 node info /turtle_controller
+```
+
+is also correct.
+
+---
+
 # 📁 Package Structure
 
 The package is:
@@ -1015,11 +1136,21 @@ turtlesim_catch_them_all/
     └── turtle_controller.py
 ```
 
-The uploaded package is an `ament_python` package and declares dependencies on `rclpy`, `turtlesim`, `geometry_msgs`, and `my_robot_interfaces`.
+The package is an:
+
+```text
+ament_python
+```
+
+package.
+
+The Python package contains the implementation for the two ROS 2 nodes.
+
+The executable names are configured through `setup.py`.
 
 ---
 
-# 🔗 Package Dependencies
+# 🔗 Dependencies
 
 The project requires:
 
@@ -1071,7 +1202,7 @@ which is used to control turtle velocity.
 
 ### `my_robot_interfaces`
 
-Provides the project's custom:
+Provides the project's custom interfaces:
 
 ```text
 Turtle.msg
@@ -1107,7 +1238,7 @@ Then build the project:
 colcon build --packages-select turtlesim_catch_them_all
 ```
 
-Source again:
+Source the workspace again:
 
 ```bash
 source ~/ros2_ws/install/setup.bash
@@ -1139,15 +1270,13 @@ source ~/ros2_ws/install/setup.bash
 ros2 run turtlesim_catch_them_all spawner
 ```
 
-The spawner will begin creating turtles.
-
-You should see messages similar to:
+The `spawner` executable starts the ROS 2 node:
 
 ```text
-New alive turtle: turtle1
-New alive turtle: turtle2
-New alive turtle: turtle3
+/turtle_spawner
 ```
+
+The spawner will begin creating turtles.
 
 ---
 
@@ -1156,6 +1285,12 @@ New alive turtle: turtle3
 ```bash
 source ~/ros2_ws/install/setup.bash
 ros2 run turtlesim_catch_them_all controller
+```
+
+The `controller` executable starts the ROS 2 node:
+
+```text
+/turtle_controller
 ```
 
 The controller will:
@@ -1180,24 +1315,28 @@ Repeat
 
 # ⚡ Run With Parameters
 
-You can change the spawner frequency without modifying the code.
+Parameters can be provided when starting the nodes.
 
-Example:
+## Change Spawning Frequency
+
+For example:
 
 ```bash
-ros2 run turtlesim_catch_them_all turtle_spawner --ros-args -p spawn_frequency:=2.0
+ros2 run turtlesim_catch_them_all spawner --ros-args -p spawn_frequency:=2.0
 ```
 
-This makes the spawning frequency:
+This changes the spawning frequency to:
 
 ```text
-2 turtles/second
+2.0 turtles/second
 ```
 
-You can also change the turtle prefix:
+---
+
+## Change Turtle Name Prefix
 
 ```bash
-ros2 run turtlesim_catch_them_all turtle_spawner --ros-args -p turtle_name_prefix:=enemy
+ros2 run turtlesim_catch_them_all spawner --ros-args -p turtle_name_prefix:=enemy
 ```
 
 The generated names will then use:
@@ -1211,18 +1350,18 @@ enemy3
 
 ---
 
-## Change Target Selection
-
-Closest turtle:
+## Catch Closest Turtle
 
 ```bash
-ros2 run turtlesim_catch_them_all turtle_controller --ros-args -p catch_closest_turtle_first:=true
+ros2 run turtlesim_catch_them_all controller --ros-args -p catch_closest_turtle_first:=true
 ```
 
-First turtle:
+---
+
+## Catch First Turtle
 
 ```bash
-ros2 run turtlesim_catch_them_all turtle_controller --ros-args -p catch_closest_turtle_first:=false
+ros2 run turtlesim_catch_them_all controller --ros-args -p catch_closest_turtle_first:=false
 ```
 
 ---
@@ -1251,7 +1390,7 @@ Expected nodes include:
 ros2 topic list
 ```
 
-Important topics:
+Important topics include:
 
 ```text
 /turtle1/pose
@@ -1267,7 +1406,7 @@ Important topics:
 ros2 topic echo /alive_turtles
 ```
 
-This lets you see the custom `TurtleArray` message being published.
+This lets you see the custom `TurtleArray` messages being published.
 
 ---
 
@@ -1277,6 +1416,8 @@ This lets you see the custom `TurtleArray` message being published.
 ros2 topic echo /turtle1/pose
 ```
 
+This displays the current pose of `turtle1`.
+
 ---
 
 ## Inspect Velocity Commands
@@ -1284,6 +1425,8 @@ ros2 topic echo /turtle1/pose
 ```bash
 ros2 topic echo /turtle1/cmd_vel
 ```
+
+This displays the velocity commands published by the controller.
 
 ---
 
@@ -1327,26 +1470,23 @@ ros2 interface show my_robot_interfaces/msg/TurtleArray
 
 ---
 
-## Inspect Node
+## Inspect Spawner Node
 
 ```bash
 ros2 node info /turtle_spawner
 ```
 
-and:
+This shows the publishers, subscribers, services, and clients associated with the spawner node.
+
+---
+
+## Inspect Controller Node
 
 ```bash
 ros2 node info /turtle_controller
 ```
 
-These commands are very useful for understanding:
-
-* publishers
-* subscribers
-* services
-* clients
-
-associated with each node.
+This shows the publishers, subscribers, services, and clients associated with the controller node.
 
 ---
 
@@ -1376,7 +1516,7 @@ The complete system works like this:
         Add turtle to alive list
                    │
                    ▼
-         Publish alive_turtles
+         Publish /alive_turtles
                    │
                    ▼
         Controller receives list
@@ -1428,7 +1568,7 @@ The complete system works like this:
 
 This project was different from writing individual ROS 2 examples because multiple ROS 2 concepts had to work together.
 
-### 1. Designing before coding
+## 1. Designing Before Coding
 
 Instead of immediately writing code, the project required thinking about:
 
@@ -1450,7 +1590,7 @@ This is an important step toward designing larger ROS 2 systems.
 
 ---
 
-### 2. Node responsibilities
+## 2. Separating Node Responsibilities
 
 The project demonstrates why functionality should be separated between nodes.
 
@@ -1466,7 +1606,7 @@ Movement
 Turtle management
 ```
 
-the system separates responsibilities.
+the system separates responsibilities:
 
 ```text
 Spawner
@@ -1482,9 +1622,9 @@ This makes the architecture easier to understand and extend.
 
 ---
 
-### 3. Topics vs Services
+## 3. Topics vs Services
 
-This project uses both.
+This project uses both communication mechanisms.
 
 ### Topics
 
@@ -1492,7 +1632,7 @@ Used for continuous information:
 
 ```text
 /turtle1/pose
-alive_turtles
+/alive_turtles
 /turtle1/cmd_vel
 ```
 
@@ -1503,14 +1643,14 @@ Used for specific requests:
 ```text
 /spawn
 /kill
-catch_turtle
+/catch_turtle
 ```
 
-This is a practical example of choosing the appropriate ROS 2 communication mechanism.
+This provides practical experience in choosing the appropriate ROS 2 communication mechanism.
 
 ---
 
-### 4. Custom Interfaces
+## 4. Custom Interfaces
 
 Instead of using only standard ROS 2 messages, the project uses:
 
@@ -1524,7 +1664,7 @@ This demonstrates how custom interfaces can represent application-specific data.
 
 ---
 
-### 5. Service chaining
+## 5. Service Chaining
 
 One particularly useful architecture is:
 
@@ -1540,13 +1680,35 @@ Spawner
 Turtlesim
 ```
 
-The controller doesn't need to know how the turtle is actually removed.
+The controller does not need to know how the turtle is actually removed.
 
 It simply requests the operation.
 
 ---
 
-### 6. Basic autonomous behavior
+## 6. Asynchronous Service Calls
+
+The controller sends the catch request asynchronously.
+
+Conceptually:
+
+```text
+Send request
+     ↓
+Continue ROS 2 execution
+     ↓
+Service processes request
+     ↓
+Response received
+     ↓
+Callback handles response
+```
+
+This is useful when building ROS 2 applications that communicate with services while continuing other processing.
+
+---
+
+## 7. Basic Autonomous Behavior
 
 The controller implements a simple autonomous behavior:
 
@@ -1564,7 +1726,7 @@ Decide again
 Act again
 ```
 
-This is a simplified version of the same fundamental loop used in many autonomous robotic systems.
+This is a simplified version of the fundamental loop used in many autonomous robotic systems.
 
 ---
 
@@ -1588,7 +1750,7 @@ for smoother movement.
 
 ## 2. Collision Avoidance
 
-The turtle currently doesn't intelligently avoid other turtles or obstacles.
+The turtle currently does not intelligently avoid other turtles or obstacles.
 
 A future version could implement:
 
@@ -1602,13 +1764,13 @@ Collision avoidance
 
 ## 3. Better Target Selection
 
-Instead of only:
+Instead of only selecting based on:
 
 ```text
 closest turtle
 ```
 
-you could select based on:
+target selection could consider:
 
 ```text
 distance
@@ -1667,6 +1829,8 @@ catch_closest_turtle_first
 
 could be modified at runtime.
 
+This would provide additional practice with ROS 2 runtime parameters.
+
 ---
 
 # 📌 Key Takeaways
@@ -1703,7 +1867,16 @@ Complete ROS 2 Application
 
 The most important lesson was not simply making the turtle move.
 
-It was learning how to **design a ROS 2 system**, divide responsibilities between nodes, choose appropriate communication mechanisms, create custom interfaces, and connect everything into a scalable application.
+It was learning how to:
+
+* Design a ROS 2 system.
+* Divide responsibilities between nodes.
+* Choose appropriate communication mechanisms.
+* Create custom interfaces.
+* Use parameters for configurable behavior.
+* Use timers for periodic execution.
+* Use asynchronous service calls.
+* Combine multiple ROS 2 concepts into one application.
 
 ---
 
@@ -1733,11 +1906,11 @@ Turtle Removal
 Next Target
 ```
 
-This was my **Day 8 of learning ROS 2**, and it was a major step from understanding individual ROS 2 concepts to actually combining them into a complete robotic application.
+This was my **Day 8 of learning ROS 2**, and it was a major step from understanding individual ROS 2 concepts to combining them into a complete autonomous robotic application.
 
 ---
 
-## 📚 ROS 2 Concepts Practiced
+# 📚 ROS 2 Concepts Practiced
 
 * Nodes
 * Topics
@@ -1760,6 +1933,7 @@ This was my **Day 8 of learning ROS 2**, and it was a major step from understand
 * Basic proportional control
 * ROS 2 package architecture
 * Multi-node system design
+* Executable names vs Node names
 
 ---
 
@@ -1769,6 +1943,7 @@ This was my **Day 8 of learning ROS 2**, and it was a major step from understand
 **Platform:** ROS 2 Jazzy
 **Language:** Python
 **Simulation:** Turtlesim
+**Package:** `turtlesim_catch_them_all`
 **Focus:** Complete ROS 2 Application Development
 
 > **From learning individual ROS 2 concepts to integrating them into a complete autonomous application.**
