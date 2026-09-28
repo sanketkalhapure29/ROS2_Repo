@@ -13,27 +13,24 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='sanket',
-    maintainer_email='kalhapuresanket91@gmail.com',
+    maintainer='ed',
+    maintainer_email='ed@todo.todo',
     description='TODO: Package description',
     license='TODO: License declaration',
-    extras_require={
-        'test': [
-            'pytest',
-        ],
-    },
+    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            "py_node = my_py_pkg.my_first_node:main", 
+            "py_node = my_py_pkg.my_first_node:main",
             "robot_news_station = my_py_pkg.robot_news_station:main",
             "smartphone = my_py_pkg.smartphone:main",
+            "number_publisher = my_py_pkg.number_publisher:main",
+            "number_counter = my_py_pkg.number_counter:main",
             "add_two_ints_server = my_py_pkg.add_two_ints_server:main",
             "add_two_ints_client_no_oop = my_py_pkg.add_two_ints_client_no_oop:main",
             "add_two_ints_client = my_py_pkg.add_two_ints_client:main",
-            "trial_client = my_py_pkg.trial_client:main",
-            "number_counter = my_py_pkg.number_counter:main",
-            "number_publisher = my_py_pkg.number_publisher:main",
-            "hardware_status_publisher = my_py_pkg.hardware_status_publisher:main",
+            "hw_status_publisher = my_py_pkg.hardware_status_publisher:main",
+            "led_panel = my_py_pkg.led_panel:main",
+            "battery = my_py_pkg.battery:main"
         ],
     },
 )

@@ -2,38 +2,39 @@
 import rclpy
 from rclpy.node import Node
 from example_interfaces.srv import AddTwoInts
- 
- 
-class AddTwoIntsClient(Node): # MODIFY NAME
+from functools import partial
+
+class AddTwoIntsClient(Node):
     def __init__(self):
-        super().__init__("add_two_ints_client") # MODIFY NAME
+        super().__init__("add_two_ints_client")
+        self.client_ = self.create_client(AddTwoInts, "add_two_ints")
 
-        self.client = self.create_client(AddTwoInts, "add_two_ints")
-        while not self.client.wait_for_service(1.0):
-            self.get_logger().warning("Waiting for add_two_ints server...")
-
+    def call_add_two_ints(self, a, b):
+        while not self.client_.wait_for_service(1.0):
+            self.get_logger().warn("Waiting for Add Two Ints server...")
+        
         request = AddTwoInts.Request()
-        request.a = 3
-        request.b = 8
+        request.a = a
+        request.b = b
 
-        self.future = self.client.call_async(request)
-        self.future.add_done_callback(
-            lambda completed_future: self.log_response(request, completed_future)
-        )
+        future = self.client_.call_async(request)
+        future.add_done_callback(
+            partial(self.callback_call_add_two_ints, request=request))
 
-    def log_response(self, request, future):
+    def callback_call_add_two_ints(self, future, request):
         response = future.result()
-        self.get_logger().info(
-            str(request.a) + " + " + str(request.b) + " = " + str(response.sum)
-        )
- 
- 
+        self.get_logger().info(str(request.a) + " + " +
+                               str(request.b) + " = " + str(response.sum))
+
 def main(args=None):
     rclpy.init(args=args)
-    node = AddTwoIntsClient() # MODIFY NAME
-    rclpy.spin_until_future_complete(node, node.future)
+    node = AddTwoIntsClient()
+    node.call_add_two_ints(2, 7)
+    node.call_add_two_ints(1, 4)
+    node.call_add_two_ints(10, 20)
+    rclpy.spin(node)
     rclpy.shutdown()
- 
- 
+
+
 if __name__ == "__main__":
     main()
