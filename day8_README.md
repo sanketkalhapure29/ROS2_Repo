@@ -1136,7 +1136,7 @@ You should see the Turtlesim window.
 
 ```bash
 source ~/ros2_ws/install/setup.bash
-ros2 run turtlesim_catch_them_all turtle_spawner
+ros2 run turtlesim_catch_them_all spawner
 ```
 
 The spawner will begin creating turtles.
@@ -1155,7 +1155,7 @@ New alive turtle: turtle3
 
 ```bash
 source ~/ros2_ws/install/setup.bash
-ros2 run turtlesim_catch_them_all turtle_controller
+ros2 run turtlesim_catch_them_all controller
 ```
 
 The controller will:
